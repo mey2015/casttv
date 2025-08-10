@@ -1,26 +1,27 @@
-    const videoElement = document.getElementById('main-video');
-    const chromecastButton = document.getElementById('chromecastButton');
-    let castSession = null;
-    let remotePlayer = null;
-    let remotePlayerController = null;
-
-    /**
-     * Initializes the Chromecast API.
-     */
-// Only one declaration, shared across functions if needed
 let castSession = null;
 let remotePlayer = null;
 let remotePlayerController = null;
+let isChromecastInitialized = false;
+
+const videoElement = document.getElementById('main-video');
+const chromecastButton = document.getElementById('chromecastButton');
+
+function disableChromecastButton() {
+  chromecastButton.setAttribute('data-cast-state', 'NO_DEVICES_AVAILABLE');
+  chromecastButton.disabled = true;
+}
 
 function initChromecast() {
-  const castContext = cast.framework.CastContext.getInstance();
+  if (isChromecastInitialized) return;
+  isChromecastInitialized = true;
 
-  if (!window.chrome || !window.chrome.cast) {
+  if (!window.chrome?.cast || !cast?.framework) {
     console.warn("Chromecast API not available. Make sure it's loaded and supported.");
-    chromecastButton.setAttribute('data-cast-state', 'NO_DEVICES_AVAILABLE');
-    chromecastButton.disabled = true;
+    disableChromecastButton();
     return;
   }
+
+  const castContext = cast.framework.CastContext.getInstance();
 
   castContext.setOptions({
     receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
@@ -37,7 +38,6 @@ function initChromecast() {
     }
   );
 
-  // Assign to outer variables
   remotePlayer = new cast.framework.RemotePlayer();
   remotePlayerController = new cast.framework.RemotePlayerController(remotePlayer);
 
@@ -58,7 +58,10 @@ function initChromecast() {
     }
   );
 
-  chromecastButton.addEventListener('click', launchCastApp);
+  if (!chromecastButton.hasListener) {
+    chromecastButton.addEventListener('click', launchCastApp);
+    chromecastButton.hasListener = true; // Custom property to prevent double attachment
+  }
   updateCastButtonState(castContext.getCastState());
 }
     /**
