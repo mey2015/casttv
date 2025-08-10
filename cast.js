@@ -7,16 +7,18 @@
     /**
      * Initializes the Chromecast API.
      */
+// Only one declaration, shared across functions if needed
+let castSession = null;
+let remotePlayer = null;
+let remotePlayerController = null;
+
 function initChromecast() {
   const castContext = cast.framework.CastContext.getInstance();
-  let castSession = null;
-  let remotePlayer = null;
-  let remotePlayerController = null;
 
   if (!window.chrome || !window.chrome.cast) {
     console.warn("Chromecast API not available. Make sure it's loaded and supported.");
     chromecastButton.setAttribute('data-cast-state', 'NO_DEVICES_AVAILABLE');
-    chromecastButton.disabled = true; // Optional: disable button
+    chromecastButton.disabled = true;
     return;
   }
 
@@ -35,6 +37,7 @@ function initChromecast() {
     }
   );
 
+  // Assign to outer variables
   remotePlayer = new cast.framework.RemotePlayer();
   remotePlayerController = new cast.framework.RemotePlayerController(remotePlayer);
 
@@ -42,7 +45,6 @@ function initChromecast() {
     cast.framework.RemotePlayerEventType.IS_PAUSED_CHANGED,
     () => {
       console.log('Remote player paused status:', remotePlayer.isPaused);
-      // Update local UI here if needed
     }
   );
 
