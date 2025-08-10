@@ -162,4 +162,3 @@
         chromecastButton.setAttribute('data-cast-state', 'NO_DEVICES_AVAILABLE');
       }
     };
-.
