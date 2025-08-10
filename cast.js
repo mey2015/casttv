@@ -1,3 +1,12 @@
+    const videoElement = document.getElementById('main-video');
+    const chromecastButton = document.getElementById('chromecastButton');
+    let castSession = null;
+    let remotePlayer = null;
+    let remotePlayerController = null;
+
+    /**
+     * Initializes the Chromecast API.
+     */
     function initChromecast() {
       // Check if the Cast API is available
       if (!window.chrome || !window.chrome.cast) {
