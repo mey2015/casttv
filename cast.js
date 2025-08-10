@@ -11,18 +11,21 @@ function disableChromecastButton() {
   chromecastButton.disabled = true;
 }
 
+function isChromecastApiAvailable() {
+  return !!(window.chrome?.cast && cast?.framework);
+}
+
 function initChromecast() {
   if (isChromecastInitialized) return;
   isChromecastInitialized = true;
 
-  if (!window.chrome?.cast || !cast?.framework) {
+  if (!isChromecastApiAvailable()) {
     console.warn("Chromecast API not available. Make sure it's loaded and supported.");
     disableChromecastButton();
     return;
   }
 
   const castContext = cast.framework.CastContext.getInstance();
-
   castContext.setOptions({
     receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
     autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
@@ -41,26 +44,11 @@ function initChromecast() {
   remotePlayer = new cast.framework.RemotePlayer();
   remotePlayerController = new cast.framework.RemotePlayerController(remotePlayer);
 
-  remotePlayerController.addEventListener(
-    cast.framework.RemotePlayerEventType.IS_PAUSED_CHANGED,
-    () => {
-      console.log('Remote player paused status:', remotePlayer.isPaused);
-    }
-  );
+  attachRemotePlayerListeners();
 
-  remotePlayerController.addEventListener(
-    cast.framework.RemotePlayerEventType.IS_CONNECTED_CHANGED,
-    () => {
-      console.log('Remote player connected status:', remotePlayer.isConnected);
-      if (!remotePlayer.isConnected && castSession && videoElement.paused) {
-        videoElement.play();
-      }
-    }
-  );
-
-  if (!chromecastButton.hasListener) {
+  if (!isChromecastButtonListenerAttached) {
     chromecastButton.addEventListener('click', launchCastApp);
-    chromecastButton.hasListener = true; // Custom property to prevent double attachment
+    isChromecastButtonListenerAttached = true;
   }
   updateCastButtonState(castContext.getCastState());
 }
