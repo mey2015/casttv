@@ -7,69 +7,58 @@
     /**
      * Initializes the Chromecast API.
      */
-    function initChromecast() {
-      // Check if the Cast API is available
-      if (!window.chrome || !window.chrome.cast) {
-        console.warn("Chromecast API not available. Make sure it's loaded and supported.");
-        chromecastButton.setAttribute('data-cast-state', 'NO_DEVICES_AVAILABLE');
-        return;
+function initChromecast() {
+  const castContext = cast.framework.CastContext.getInstance();
+  let castSession = null;
+  let remotePlayer = null;
+  let remotePlayerController = null;
+
+  if (!window.chrome || !window.chrome.cast) {
+    console.warn("Chromecast API not available. Make sure it's loaded and supported.");
+    chromecastButton.setAttribute('data-cast-state', 'NO_DEVICES_AVAILABLE');
+    chromecastButton.disabled = true; // Optional: disable button
+    return;
+  }
+
+  castContext.setOptions({
+    receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+    autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+  });
+
+  castContext.addEventListener(
+    cast.framework.CastContextEventType.CAST_STATE_CHANGED,
+    (event) => {
+      updateCastButtonState(event.castState);
+      if (event.castState === cast.framework.CastState.NOT_CONNECTED && videoElement.paused) {
+        videoElement.play();
       }
-
-      // Set up the Cast context options
-      cast.framework.CastContext.getInstance().setOptions({
-        receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID, // Use the default media receiver
-        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED // Auto-join session for this origin
-      });
-
-      // Listen for Cast state changes (e.g., connected, disconnected)
-      cast.framework.CastContext.getInstance().addEventListener(
-        cast.framework.CastContextEventType.CAST_STATE_CHANGED,
-        (event) => {
-          updateCastButtonState(event.castState);
-          if (event.castState === cast.framework.CastState.NOT_CONNECTED) {
-            // If disconnected, ensure local video resumes if it was paused
-            if (!videoElement.paused) {
-              videoElement.play();
-            }
-          }
-        }
-      );
-
-      // Initialize remote player for controlling media on the receiver
-      remotePlayer = new cast.framework.RemotePlayer();
-      remotePlayerController = new cast.framework.RemotePlayerController(remotePlayer);
-
-      // Listen to changes in the remote player state
-      remotePlayerController.addEventListener(
-        cast.framework.RemotePlayerEventType.IS_PAUSED_CHANGED,
-        () => {
-          console.log('Remote player paused status:', remotePlayer.isPaused);
-          // You could update local UI (e.g., play/pause button) here
-        }
-      );
-
-      remotePlayerController.addEventListener(
-        cast.framework.RemotePlayerEventType.IS_CONNECTED_CHANGED,
-        () => {
-          console.log('Remote player connected status:', remotePlayer.isConnected);
-          if (!remotePlayer.isConnected && castSession) {
-            // If remote player disconnects, end the session and resume local playback
-            console.log('Chromecast session ended due to remote player disconnection.');
-            // castSession.endSession(true); // This might be redundant if CAST_STATE_CHANGED handles it
-            if (videoElement.paused) {
-              videoElement.play(); // Resume local playback
-            }
-          }
-        }
-      );
-
-      // Add event listener to the Chromecast button
-      chromecastButton.addEventListener('click', launchCastApp);
-
-      // Initial update of the button state
-      updateCastButtonState(cast.framework.CastContext.getInstance().getCastState());
     }
+  );
 
+  remotePlayer = new cast.framework.RemotePlayer();
+  remotePlayerController = new cast.framework.RemotePlayerController(remotePlayer);
+
+  remotePlayerController.addEventListener(
+    cast.framework.RemotePlayerEventType.IS_PAUSED_CHANGED,
+    () => {
+      console.log('Remote player paused status:', remotePlayer.isPaused);
+      // Update local UI here if needed
+    }
+  );
+
+  remotePlayerController.addEventListener(
+    cast.framework.RemotePlayerEventType.IS_CONNECTED_CHANGED,
+    () => {
+      console.log('Remote player connected status:', remotePlayer.isConnected);
+      if (!remotePlayer.isConnected && castSession && videoElement.paused) {
+        videoElement.play();
+      }
+    }
+  );
+
+  chromecastButton.addEventListener('click', launchCastApp);
+  updateCastButtonState(castContext.getCastState());
+}
     /**
      * Updates the UI state of the Chromecast button based on the cast state.
      * @param {cast.framework.CastState} castState The current Cast state.
